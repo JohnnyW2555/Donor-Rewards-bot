@@ -458,7 +458,7 @@ async function handleActionButton(interaction, customId, category, action, guild
         db.users[userId].privacyEnabled = !db.users[userId].privacyEnabled
         saveDatabase(guildId, db)
         
-        await interaction.followUp({
+        await interaction.reply({
           content: `✅ Privacy settings ${db.users[userId].privacyEnabled ? 'enabled' : 'disabled'}!`,
           ephemeral: true
         })
@@ -468,7 +468,7 @@ async function handleActionButton(interaction, customId, category, action, guild
         delete db.users[userId].selectedDraw
         saveDatabase(guildId, db)
         
-        await interaction.followUp({
+        await interaction.reply({
           content: "✅ Draw selection set to automatic!",
           ephemeral: true
         })
@@ -479,11 +479,29 @@ async function handleActionButton(interaction, customId, category, action, guild
           saveDatabase(guildId, db)
           
           const drawName = db.donationDraws[action].name
-          await interaction.followUp({
+          await interaction.reply({
             content: `✅ Selected draw: **${drawName}**!`,
             ephemeral: true
           })
         }
+      }
+    } else if (category.id === 'setup') {
+      // Handle admin setup actions
+      if (action === 'set_admin_role') {
+        await interaction.reply({
+          content: "🛡️ **Set Admin Role**\n\nTo set the admin role, please mention the role you want to use as admin role.\n\nExample: `@Admin` or `@Moderator`\n\n*This feature will be fully interactive in the next update.*",
+          ephemeral: true
+        })
+      } else if (action === 'set_log_channel') {
+        await interaction.reply({
+          content: "📝 **Set Log Channel**\n\nTo set the log channel, please mention the channel you want to use for logs.\n\nExample: `#bot-logs` or `#admin-logs`\n\n*This feature will be fully interactive in the next update.*",
+          ephemeral: true
+        })
+      } else if (action === 'set_notification_channel') {
+        await interaction.reply({
+          content: "📢 **Set Notification Channel**\n\nTo set the notification channel, please mention the channel you want to use for notifications.\n\nExample: `#announcements` or `#notifications`\n\n*This feature will be fully interactive in the next update.*",
+          ephemeral: true
+        })
       }
     }
   } catch (error) {
@@ -492,12 +510,19 @@ async function handleActionButton(interaction, customId, category, action, guild
     logger.error("Action details:", { customId, categoryId: category.id, action, guildId })
     
     try {
-      await interaction.followUp({
-        content: "❌ An error occurred while processing your request.",
-        ephemeral: true
-      })
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: "❌ An error occurred while processing your request.",
+          ephemeral: true
+        })
+      } else {
+        await interaction.followUp({
+          content: "❌ An error occurred while processing your request.",
+          ephemeral: true
+        })
+      }
     } catch (followUpError) {
-      logger.error("Error sending followUp:", followUpError)
+      logger.error("Error sending error response:", followUpError)
     }
   }
 }

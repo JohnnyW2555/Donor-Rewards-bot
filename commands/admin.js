@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from "discord.js"
 import { getDatabase, saveDatabase } from "../utils/database.js"
 import { logger } from "../utils/logger.js"
-import { handleCategoryMenu, createPaginatedEmbeds } from "../utils/pagination.js"
+import { handleCategoryMenu, createPaginatedEmbeds, createActionButtons } from "../utils/pagination.js"
 
 export const data = new SlashCommandBuilder()
   .setName("admin")
@@ -118,13 +118,22 @@ async function generateSetupPage(db, guild) {
       }
     )
     .addFields({
-      name: "ℹ️ Setup Instructions",
-      value: "Use the original `/admin setup` command to configure these settings.",
+      name: "⚡ Quick Setup",
+      value: "Click the buttons below to configure each setting:",
       inline: false
     })
     .setFooter({ text: "Powered By Aegisum Eco System" })
 
-  return [embed]
+  const actionButtons = createActionButtons([
+    { label: "Set Admin Role", customId: "set_admin_role", style: "Primary", emoji: "🛡️" },
+    { label: "Set Log Channel", customId: "set_log_channel", style: "Primary", emoji: "📝" },
+    { label: "Set Notification Channel", customId: "set_notification_channel", style: "Primary", emoji: "📢" }
+  ], "setup")
+
+  return {
+    embeds: [embed],
+    components: actionButtons
+  }
 }
 
 async function generateDashboard(db, guild) {
