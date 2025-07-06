@@ -107,8 +107,8 @@ async function generateSetLuckyNumbers(db, user) {
     .setFooter({ text: "Powered By Aegisum Eco System" })
 
   const actionButtons = createActionButtons([
-    { label: "Quick Pick (Random)", customId: "quick_pick", style: "Primary", emoji: "🎲" },
-    { label: "Clear All", customId: "clear_all", style: "Danger", emoji: "🗑️" }
+    { id: "quick_pick", label: "Quick Pick (Random)", style: 1, emoji: "🎲" },
+    { id: "clear_all", label: "Clear All", style: 4, emoji: "🗑️" }
   ], "set_lucky")
 
   return {
@@ -140,8 +140,8 @@ async function generateClearLuckyNumbers(db, user) {
     .setFooter({ text: "Powered By Aegisum Eco System" })
 
   const actionButtons = createActionButtons([
-    { label: "Confirm Clear", customId: "confirm_clear", style: "Danger", emoji: "✅" },
-    { label: "Cancel", customId: "cancel_clear", style: "Secondary", emoji: "❌" }
+    { id: "confirm_clear", label: "Confirm Clear", style: 4, emoji: "✅" },
+    { id: "cancel_clear", label: "Cancel", style: 2, emoji: "❌" }
   ], "clear_lucky")
 
   return {

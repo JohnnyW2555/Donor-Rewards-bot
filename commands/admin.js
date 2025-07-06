@@ -125,14 +125,14 @@ async function generateSetupPage(db, guild) {
     .setFooter({ text: "Powered By Aegisum Eco System" })
 
   const actionButtons = createActionButtons([
-    { label: "Set Admin Role", customId: "set_admin_role", style: "Primary", emoji: "🛡️" },
-    { label: "Set Log Channel", customId: "set_log_channel", style: "Primary", emoji: "📝" },
-    { label: "Set Notification Channel", customId: "set_notification_channel", style: "Primary", emoji: "📢" }
+    { id: "set_admin_role", label: "Set Admin Role", style: 1, emoji: "🛡️" },
+    { id: "set_log_channel", label: "Set Log Channel", style: 1, emoji: "📝" },
+    { id: "set_notification_channel", label: "Set Notification Channel", style: 1, emoji: "📢" }
   ], "setup")
 
   return {
     embeds: [embed],
-    components: actionButtons
+    components: [actionButtons]
   }
 }
 

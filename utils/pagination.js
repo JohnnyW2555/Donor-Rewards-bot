@@ -345,7 +345,7 @@ export async function handleCategoryMenu(interaction, menuData, customId, timeou
 
       // Handle action buttons (privacy, draw selection, etc.)
       if (actionType === 'action') {
-        await handleActionButton(catInteraction, customId, category, action, interaction.guildId)
+        await handleActionButton(catInteraction, catInteraction.customId, category, action, interaction.guildId)
         
         // Refresh the category view
         const refreshedData = await category.generatePages()
