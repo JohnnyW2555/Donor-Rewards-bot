@@ -453,7 +453,7 @@ async function handleActionButton(interaction, customId, category, action, guild
       }
     }
     
-    if (category.id === 'privacy') {
+    if (category.id === 'privacy' || customId.includes('user_privacy')) {
       if (action === 'toggle_privacy') {
         db.users[userId].privacyEnabled = !db.users[userId].privacyEnabled
         saveDatabase(guildId, db)
@@ -500,6 +500,41 @@ async function handleActionButton(interaction, customId, category, action, guild
       } else if (action === 'set_notification_channel') {
         await interaction.reply({
           content: "📢 **Set Notification Channel**\n\nTo set the notification channel, please mention the channel you want to use for notifications.\n\nExample: `#announcements` or `#notifications`\n\n*This feature will be fully interactive in the next update.*",
+          ephemeral: true
+        })
+      }
+    } else if (category.id === 'set_lucky' || category.id === 'clear_lucky') {
+      // Handle lucky number actions
+      if (action === 'quick_pick') {
+        // Generate 5 random numbers between 1-50
+        const randomNumbers = []
+        while (randomNumbers.length < 5) {
+          const num = Math.floor(Math.random() * 50) + 1
+          if (!randomNumbers.includes(num)) {
+            randomNumbers.push(num)
+          }
+        }
+        
+        if (!db.users[userId]) db.users[userId] = {}
+        db.users[userId].luckyNumbers = randomNumbers.sort((a, b) => a - b)
+        saveDatabase(guildId, db)
+        
+        await interaction.reply({
+          content: `🎲 **Quick Pick Complete!**\nYour new lucky numbers: **${randomNumbers.join(", ")}**`,
+          ephemeral: true
+        })
+      } else if (action === 'clear_all' || action === 'confirm_clear') {
+        if (!db.users[userId]) db.users[userId] = {}
+        db.users[userId].luckyNumbers = []
+        saveDatabase(guildId, db)
+        
+        await interaction.reply({
+          content: "🗑️ **Lucky numbers cleared!**\nAll your lucky numbers have been removed.",
+          ephemeral: true
+        })
+      } else if (action === 'cancel_clear') {
+        await interaction.reply({
+          content: "❌ **Cancelled**\nYour lucky numbers were not cleared.",
           ephemeral: true
         })
       }

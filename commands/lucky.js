@@ -11,24 +11,37 @@ export async function execute(interaction) {
   try {
     const serverId = interaction.guildId
     const db = getDatabase(serverId)
-    const subcommand = interaction.options.getSubcommand()
+    
+    // Create interactive menu for lucky numbers
+    const categories = [
+      {
+        id: "view_lucky",
+        name: "View Lucky Numbers",
+        emoji: "👀",
+        description: "View your current lucky numbers",
+        generatePages: async () => await generateViewLuckyNumbers(db, interaction.user)
+      },
+      {
+        id: "set_lucky",
+        name: "Set Lucky Numbers",
+        emoji: "🎯",
+        description: "Set or update your lucky numbers",
+        generatePages: async () => await generateSetLuckyNumbers(db, interaction.user)
+      },
+      {
+        id: "clear_lucky",
+        name: "Clear Lucky Numbers",
+        emoji: "🗑️",
+        description: "Clear all your lucky numbers",
+        generatePages: async () => await generateClearLuckyNumbers(db, interaction.user)
+      }
+    ]
 
-    switch (subcommand) {
-      case "set":
-        await handleSetLuckyNumbers(interaction, db)
-        break
-      case "view":
-        await handleViewLuckyNumbers(interaction, db)
-        break
-      case "clear":
-        await handleClearLuckyNumbers(interaction, db)
-        break
-      default:
-        await interaction.reply({
-          content: "❌ Unknown subcommand.",
-          flags: MessageFlags.Ephemeral,
-        })
-    }
+    await handleCategoryMenu(interaction, categories, {
+      title: "🍀 Lucky Numbers",
+      description: "Manage your lucky numbers for draws and games",
+      color: "#00FF00"
+    })
   } catch (error) {
     logger.error("Error in lucky command:", error)
     
@@ -49,136 +62,92 @@ export async function execute(interaction) {
   }
 }
 
-async function handleSetLuckyNumbers(interaction, db) {
-  const numbersString = interaction.options.getString("numbers")
-  const userId = interaction.user.id
-
-  // Parse and validate numbers
-  const numbers = numbersString.split(",").map(n => n.trim()).map(Number)
+async function generateViewLuckyNumbers(db, user) {
+  const userData = db.users?.[user.id] || {}
+  const luckyNumbers = userData.luckyNumbers || []
   
-  // Validation
-  if (numbers.some(isNaN)) {
-    return interaction.reply({
-      content: "❌ All values must be valid numbers.",
-      flags: MessageFlags.Ephemeral,
-    })
-  }
-
-  if (numbers.some(n => n < 1 || n > 50)) {
-    return interaction.reply({
-      content: "❌ All numbers must be between 1 and 50.",
-      flags: MessageFlags.Ephemeral,
-    })
-  }
-
-  if (numbers.length > 10) {
-    return interaction.reply({
-      content: "❌ You can only set up to 10 lucky numbers.",
-      flags: MessageFlags.Ephemeral,
-    })
-  }
-
-  if (new Set(numbers).size !== numbers.length) {
-    return interaction.reply({
-      content: "❌ All numbers must be unique.",
-      flags: MessageFlags.Ephemeral,
-    })
-  }
-
-  // Initialize user data if needed
-  if (!db.users[userId]) {
-    db.users[userId] = {
-      totalDonated: 0,
-      entries: {},
-      donations: [],
-      achievements: [],
-      privacyEnabled: false,
-      wins: 0,
-      referrals: { referred: [], referredBy: null },
-      luckyNumbers: [],
-      milestones: [],
-      streaks: { current: 0, longest: 0, lastDonation: null }
-    }
-  }
-
-  // Set lucky numbers
-  db.users[userId].luckyNumbers = numbers.sort((a, b) => a - b)
-  saveDatabase(interaction.guildId, db)
-
   const embed = new EmbedBuilder()
-    .setTitle("🍀 Lucky Numbers Set")
-    .setDescription("Your lucky numbers have been updated!")
-    .setColor(db.config?.theme?.success || "#4CAF50")
-    .addFields({
-      name: "🎲 Your Lucky Numbers",
-      value: numbers.sort((a, b) => a - b).join(", "),
-      inline: false,
-    })
-    .addFields({
-      name: "💡 How It Works",
-      value: "Lucky numbers may give you bonus entries or special advantages in certain draws!",
-      inline: false,
-    })
+    .setTitle("👀 Your Lucky Numbers")
+    .setDescription(luckyNumbers.length > 0 ? 
+      `Your current lucky numbers: **${luckyNumbers.join(", ")}**` : 
+      "You haven't set any lucky numbers yet!")
+    .setColor("#00FF00")
+    .addFields(
+      {
+        name: "📊 Statistics",
+        value: `Total Numbers: ${luckyNumbers.length}/5\nRange: 1-50`,
+        inline: true
+      }
+    )
     .setFooter({ text: "Powered By Aegisum Eco System" })
 
-  await interaction.reply({ embeds: [embed] })
-  logger.info(`Lucky numbers set: ${numbers.join(", ")} by ${interaction.user.tag}`)
+  return [embed]
 }
 
-async function handleViewLuckyNumbers(interaction, db) {
-  const userId = interaction.user.id
-  const userData = db.users?.[userId]
-
-  if (!userData?.luckyNumbers || userData.luckyNumbers.length === 0) {
-    return interaction.reply({
-      content: "❌ You haven't set any lucky numbers yet. Use `/lucky set` to set them!",
-      flags: MessageFlags.Ephemeral,
-    })
-  }
-
+async function generateSetLuckyNumbers(db, user) {
+  const userData = db.users?.[user.id] || {}
+  const luckyNumbers = userData.luckyNumbers || []
+  
   const embed = new EmbedBuilder()
-    .setTitle("🍀 Your Lucky Numbers")
-    .setDescription("Here are your current lucky numbers")
-    .setColor(db.config?.theme?.info || "#00BCD4")
-    .addFields({
-      name: "🎲 Numbers",
-      value: userData.luckyNumbers.join(", "),
-      inline: false,
-    })
-    .addFields({
-      name: "📊 Statistics",
-      value: `Total: ${userData.luckyNumbers.length}/10\nRange: ${Math.min(...userData.luckyNumbers)} - ${Math.max(...userData.luckyNumbers)}`,
-      inline: false,
-    })
-    .setFooter({ text: "Use /lucky set to change • Powered By Aegisum Eco System" })
-
-  await interaction.reply({ embeds: [embed] })
-}
-
-async function handleClearLuckyNumbers(interaction, db) {
-  const userId = interaction.user.id
-
-  if (!db.users[userId]) {
-    return interaction.reply({
-      content: "❌ You don't have any lucky numbers to clear.",
-      flags: MessageFlags.Ephemeral,
-    })
-  }
-
-  db.users[userId].luckyNumbers = []
-  saveDatabase(interaction.guildId, db)
-
-  const embed = new EmbedBuilder()
-    .setTitle("🗑️ Lucky Numbers Cleared")
-    .setDescription("Your lucky numbers have been cleared.")
-    .setColor(db.config?.theme?.warning || "#FFC107")
-    .addFields({
-      name: "💡 Set New Numbers",
-      value: "Use `/lucky set numbers:1,7,13,21,42` to set new lucky numbers.",
-      inline: false,
-    })
+    .setTitle("🎯 Set Lucky Numbers")
+    .setDescription("Set your lucky numbers for draws and games")
+    .setColor("#FFD700")
+    .addFields(
+      {
+        name: "Current Numbers",
+        value: luckyNumbers.length > 0 ? luckyNumbers.join(", ") : "None set",
+        inline: true
+      },
+      {
+        name: "Instructions",
+        value: "• Choose 1-5 numbers between 1-50\n• Use the buttons below or type numbers\n• Numbers must be unique",
+        inline: false
+      }
+    )
     .setFooter({ text: "Powered By Aegisum Eco System" })
 
-  await interaction.reply({ embeds: [embed] })
-  logger.info(`Lucky numbers cleared by ${interaction.user.tag}`)
+  const actionButtons = createActionButtons([
+    { label: "Quick Pick (Random)", customId: "quick_pick", style: "Primary", emoji: "🎲" },
+    { label: "Clear All", customId: "clear_all", style: "Danger", emoji: "🗑️" }
+  ], "set_lucky")
+
+  return {
+    embeds: [embed],
+    components: actionButtons
+  }
 }
+
+async function generateClearLuckyNumbers(db, user) {
+  const userData = db.users?.[user.id] || {}
+  const luckyNumbers = userData.luckyNumbers || []
+  
+  const embed = new EmbedBuilder()
+    .setTitle("🗑️ Clear Lucky Numbers")
+    .setDescription("Are you sure you want to clear all your lucky numbers?")
+    .setColor("#FF0000")
+    .addFields(
+      {
+        name: "Current Numbers",
+        value: luckyNumbers.length > 0 ? luckyNumbers.join(", ") : "None set",
+        inline: true
+      },
+      {
+        name: "⚠️ Warning",
+        value: "This action cannot be undone!",
+        inline: false
+      }
+    )
+    .setFooter({ text: "Powered By Aegisum Eco System" })
+
+  const actionButtons = createActionButtons([
+    { label: "Confirm Clear", customId: "confirm_clear", style: "Danger", emoji: "✅" },
+    { label: "Cancel", customId: "cancel_clear", style: "Secondary", emoji: "❌" }
+  ], "clear_lucky")
+
+  return {
+    embeds: [embed],
+    components: actionButtons
+  }
+}
+
+// Old functions removed - now using interactive menu system
