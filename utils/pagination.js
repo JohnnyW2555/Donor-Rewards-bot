@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ComponentType } from "discord.js"
 import { logger } from "./logger.js"
+import { getDatabase, saveDatabase } from "./database.js"
 
 /**
  * Create pagination buttons
@@ -116,9 +117,8 @@ export async function handlePagination(interaction, pages, customId, timeout = 6
   
   const response = await interaction.reply({
     embeds: [pages[currentPage]],
-    components: [row],
-    fetchReply: true
-  })
+    components: [row]
+  }).then(() => interaction.fetchReply())
 
   const collector = response.createMessageComponentCollector({
     componentType: ComponentType.Button,
@@ -250,9 +250,8 @@ export async function handleCategoryMenu(interaction, menuData, customId, timeou
 
   const response = await interaction.reply({
     embeds: [mainEmbed],
-    components: categoryRows,
-    fetchReply: true
-  })
+    components: categoryRows
+  }).then(() => interaction.fetchReply())
 
   const collector = response.createMessageComponentCollector({
     componentType: ComponentType.Button,
@@ -432,11 +431,14 @@ export async function handleCategoryMenu(interaction, menuData, customId, timeou
  * @param {string} guildId - Guild ID
  */
 async function handleActionButton(interaction, customId, category, action, guildId) {
-  const { getDatabase, saveDatabase } = await import("../utils/database.js")
-  
   try {
     const db = getDatabase(guildId)
     const userId = interaction.user.id
+    
+    // Initialize users object if needed
+    if (!db.users) {
+      db.users = {}
+    }
     
     // Initialize user data if needed
     if (!db.users[userId]) {

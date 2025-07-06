@@ -1,0 +1,33 @@
+[2025-07-06T19:41:46.790Z] [INFO] Loaded event: interactionCreate
+[2025-07-06T19:41:46.802Z] [INFO] Loaded event: messageCreate
+[2025-07-06T19:41:46.803Z] [INFO] Loaded event: ready
+[2025-07-06T19:41:46.808Z] [INFO] Loaded command: achievements
+[2025-07-06T19:41:46.809Z] [INFO] Loaded command: admin
+[2025-07-06T19:41:46.813Z] [INFO] Loaded command: admin
+[2025-07-06T19:41:46.814Z] [INFO] Loaded command: donate
+[2025-07-06T19:41:46.815Z] [INFO] Loaded command: draws
+[2025-07-06T19:41:46.816Z] [INFO] Loaded command: help
+[2025-07-06T19:41:46.817Z] [INFO] Loaded command: leaderboard
+[2025-07-06T19:41:46.818Z] [INFO] Loaded command: lucky
+[2025-07-06T19:41:46.819Z] [INFO] Loaded command: milestones
+[2025-07-06T19:41:46.820Z] [INFO] Loaded command: ping
+[2025-07-06T19:41:46.821Z] [INFO] Loaded command: price
+[2025-07-06T19:41:46.822Z] [INFO] Loaded command: referral
+[2025-07-06T19:41:46.823Z] [INFO] Loaded command: user
+[2025-07-06T19:41:46.824Z] [ERROR] Failed to login: | Data: {"code":"TokenInvalid"}
+[2025-07-06T19:42:40.584Z] [INFO] Loaded event: interactionCreate
+[2025-07-06T19:42:40.596Z] [INFO] Loaded event: messageCreate
+[2025-07-06T19:42:40.597Z] [INFO] Loaded event: ready
+[2025-07-06T19:42:40.601Z] [INFO] Loaded command: achievements
+[2025-07-06T19:42:40.602Z] [INFO] Loaded command: admin
+[2025-07-06T19:42:40.604Z] [INFO] Loaded command: donate
+[2025-07-06T19:42:40.605Z] [INFO] Loaded command: draws
+[2025-07-06T19:42:40.606Z] [INFO] Loaded command: help
+[2025-07-06T19:42:40.608Z] [INFO] Loaded command: leaderboard
+[2025-07-06T19:42:40.609Z] [INFO] Loaded command: lucky
+[2025-07-06T19:42:40.610Z] [INFO] Loaded command: milestones
+[2025-07-06T19:42:40.611Z] [INFO] Loaded command: ping
+[2025-07-06T19:42:40.612Z] [INFO] Loaded command: price
+[2025-07-06T19:42:40.613Z] [INFO] Loaded command: referral
+[2025-07-06T19:42:40.615Z] [INFO] Loaded command: user
+[2025-07-06T19:42:40.615Z] [ERROR] Failed to login: | Data: {"code":"TokenInvalid"}
