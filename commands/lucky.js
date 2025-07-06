@@ -113,7 +113,7 @@ async function generateSetLuckyNumbers(db, user) {
 
   return {
     embeds: [embed],
-    components: actionButtons
+    components: [actionButtons]
   }
 }
 
@@ -146,7 +146,7 @@ async function generateClearLuckyNumbers(db, user) {
 
   return {
     embeds: [embed],
-    components: actionButtons
+    components: [actionButtons]
   }
 }
 

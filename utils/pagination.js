@@ -432,6 +432,8 @@ export async function handleCategoryMenu(interaction, menuData, customId, timeou
  */
 async function handleActionButton(interaction, customId, category, action, guildId) {
   try {
+    logger.info(`🔧 Action button clicked: customId=${customId}, action=${action}, category=${category.id}`)
+    
     const db = getDatabase(guildId)
     const userId = interaction.user.id
     
@@ -454,9 +456,13 @@ async function handleActionButton(interaction, customId, category, action, guild
     }
     
     if (category.id === 'privacy' || customId.includes('user_privacy')) {
+      logger.info(`🔒 Privacy action detected: action=${action}`)
       if (action === 'toggle_privacy') {
+        const oldValue = db.users[userId].privacyEnabled
         db.users[userId].privacyEnabled = !db.users[userId].privacyEnabled
         saveDatabase(guildId, db)
+        
+        logger.info(`🔒 Privacy toggled: ${oldValue} -> ${db.users[userId].privacyEnabled}`)
         
         await interaction.reply({
           content: `✅ Privacy settings ${db.users[userId].privacyEnabled ? 'enabled' : 'disabled'}!`,
