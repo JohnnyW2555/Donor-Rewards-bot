@@ -103,7 +103,7 @@ export function createActionButtons(actions, customId) {
  */
 export async function handlePagination(interaction, pages, customId, timeout = 60000) {
   if (pages.length === 0) {
-    return interaction.reply({ content: "❌ No data to display.", ephemeral: true })
+    return interaction.reply({ content: "❌ No data to display.", flags: MessageFlags.Ephemeral })
   }
 
   if (pages.length === 1) {
@@ -129,7 +129,7 @@ export async function handlePagination(interaction, pages, customId, timeout = 6
     if (buttonInteraction.user.id !== interaction.user.id) {
       return buttonInteraction.reply({
         content: "❌ You can't use these buttons.",
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -262,7 +262,7 @@ export async function handleCategoryMenu(interaction, menuData, customId, timeou
     if (buttonInteraction.user.id !== interaction.user.id) {
       return buttonInteraction.reply({
         content: "❌ You can't use these buttons.",
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -285,14 +285,14 @@ export async function handleCategoryMenu(interaction, menuData, customId, timeou
     } else {
       return buttonInteraction.reply({
         content: `❌ No data available for ${category.name}.`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       })
     }
     
     if (categoryPages.length === 0) {
       return buttonInteraction.reply({
         content: `❌ No data available for ${category.name}.`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       })
     }
 
@@ -335,7 +335,7 @@ export async function handleCategoryMenu(interaction, menuData, customId, timeou
       if (catInteraction.user.id !== interaction.user.id) {
         return catInteraction.reply({
           content: "❌ You can't use these buttons.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         })
       }
 
@@ -476,7 +476,7 @@ async function handleActionButton(interaction, customId, category, action, guild
         
         await interaction.reply({
           content: "✅ Draw selection set to automatic!",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         })
       } else {
         // Check if it's a valid draw ID
@@ -487,7 +487,7 @@ async function handleActionButton(interaction, customId, category, action, guild
           const drawName = db.donationDraws[action].name
           await interaction.reply({
             content: `✅ Selected draw: **${drawName}**!`,
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           })
         } else {
           logger.error(`Draw selection failed: action=${action}, available draws:`, Object.keys(db.donationDraws || {}))
@@ -503,17 +503,17 @@ async function handleActionButton(interaction, customId, category, action, guild
       if (action === 'set_admin_role') {
         await interaction.reply({
           content: "🛡️ **Set Admin Role**\n\nTo set the admin role, please mention the role you want to use as admin role.\n\nExample: `@Admin` or `@Moderator`\n\n*This feature will be fully interactive in the next update.*",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         })
       } else if (action === 'set_log_channel') {
         await interaction.reply({
           content: "📝 **Set Log Channel**\n\nTo set the log channel, please mention the channel you want to use for logs.\n\nExample: `#bot-logs` or `#admin-logs`\n\n*This feature will be fully interactive in the next update.*",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         })
       } else if (action === 'set_notification_channel') {
         await interaction.reply({
           content: "📢 **Set Notification Channel**\n\nTo set the notification channel, please mention the channel you want to use for notifications.\n\nExample: `#announcements` or `#notifications`\n\n*This feature will be fully interactive in the next update.*",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         })
       }
     } else if (category.id === 'set_lucky' || category.id === 'clear_lucky') {
@@ -534,7 +534,7 @@ async function handleActionButton(interaction, customId, category, action, guild
         
         await interaction.reply({
           content: `🎲 **Quick Pick Complete!**\nYour new lucky numbers: **${randomNumbers.join(", ")}**`,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         })
       } else if (action === 'clear_all' || action === 'confirm_clear') {
         if (!db.users[userId]) db.users[userId] = {}
@@ -543,12 +543,39 @@ async function handleActionButton(interaction, customId, category, action, guild
         
         await interaction.reply({
           content: "🗑️ **Lucky numbers cleared!**\nAll your lucky numbers have been removed.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         })
       } else if (action === 'cancel_clear') {
         await interaction.reply({
           content: "❌ **Cancelled**\nYour lucky numbers were not cleared.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
+        })
+      }
+    } else if (category.id === 'draws') {
+      // Handle draw management actions
+      if (action.startsWith('toggle_')) {
+        const drawId = action.replace('toggle_', '')
+        if (db.donationDraws && db.donationDraws[drawId]) {
+          db.donationDraws[drawId].active = !db.donationDraws[drawId].active
+          db.donationDraws[drawId].lastModified = Date.now()
+          db.donationDraws[drawId].modifiedBy = userId
+          saveDatabase(guildId, db)
+          
+          const status = db.donationDraws[drawId].active ? 'activated' : 'deactivated'
+          await interaction.reply({
+            content: `✅ Draw **${db.donationDraws[drawId].name}** has been ${status}!`,
+            flags: MessageFlags.Ephemeral
+          })
+        } else {
+          await interaction.reply({
+            content: "❌ Draw not found!",
+            flags: MessageFlags.Ephemeral
+          })
+        }
+      } else if (action === 'create_draw') {
+        await interaction.reply({
+          content: "🎯 **Create New Draw**\n\nTo create a new draw, you'll need to provide:\n• Draw name\n• Minimum donation amount\n• Maximum donation amount\n• Reward description\n• Maximum entries\n\n*Full draw creation interface coming soon!*",
+          flags: MessageFlags.Ephemeral
         })
       }
     }
@@ -561,12 +588,12 @@ async function handleActionButton(interaction, customId, category, action, guild
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           content: "❌ An error occurred while processing your request.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         })
       } else {
         await interaction.followUp({
           content: "❌ An error occurred while processing your request.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         })
       }
     } catch (followUpError) {

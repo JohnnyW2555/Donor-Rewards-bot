@@ -235,35 +235,59 @@ async function generateDrawManagement(db, guild) {
   if (draws.length === 0) {
     const embed = new EmbedBuilder()
       .setTitle("🎯 Draw Management")
-      .setDescription("❌ No draws found.\n\nUse `/admin create_draw` to create your first draw!")
+      .setDescription("❌ No draws found.\n\nCreate draws to manage donations and rewards!")
       .setColor("#F44336")
       .setFooter({ text: "Powered By Aegisum Eco System" })
-    return [embed]
+    
+    const actionButtons = createActionButtons([
+      { id: "create_draw", label: "Create Draw", style: 1, emoji: "➕" }
+    ], "draws")
+    
+    return {
+      embeds: [embed],
+      components: [actionButtons]
+    }
   }
 
-  const pages = createPaginatedEmbeds(
-    draws,
-    3, // 3 draws per page
-    ([drawId, draw]) => {
-      const totalEntries = Object.values(draw.entries || {}).reduce((sum, count) => sum + count, 0)
-      const progress = draw.maxEntries ? Math.round((totalEntries / draw.maxEntries) * 100) : 0
-      
-      return {
-        name: `🎯 ${draw.name || drawId}`,
-        value: `**ID:** \`${drawId}\`\n**Reward:** ${draw.reward}\n**Min Amount:** $${draw.minAmount}\n**Entries:** ${totalEntries}/${draw.maxEntries || "∞"} (${progress}%)\n**Status:** ${draw.active ? "🟢 Active" : "🔴 Inactive"}\n**VIP Only:** ${draw.vipOnly ? "✅ Yes" : "❌ No"}`,
-        inline: false
-      }
-    },
-    {
-      title: "🎯 Draw Management",
-      description: "Manage all donation draws",
-      color: "#FF9800",
-      useFields: true,
-      footerText: "Powered By Aegisum Eco System"
-    }
-  )
+  const embed = new EmbedBuilder()
+    .setTitle("🎯 Draw Management")
+    .setDescription("Manage all donation draws - Toggle active status or create new draws")
+    .setColor("#FF9800")
+    .setFooter({ text: "Powered By Aegisum Eco System" })
 
-  return pages
+  // Add draw information
+  for (const [drawId, draw] of draws) {
+    const totalEntries = Object.values(draw.entries || {}).reduce((sum, count) => sum + count, 0)
+    const progress = draw.maxEntries ? Math.round((totalEntries / draw.maxEntries) * 100) : 0
+    
+    embed.addFields({
+      name: `${draw.active ? "🟢" : "🔴"} ${draw.name || drawId}`,
+      value: `**ID:** \`${drawId}\`\n**Reward:** ${draw.reward}\n**Min Amount:** $${draw.minAmount}\n**Entries:** ${totalEntries}/${draw.maxEntries || "∞"} (${progress}%)\n**Status:** ${draw.active ? "Active" : "Inactive"}`,
+      inline: true
+    })
+  }
+
+  // Create action buttons for each draw
+  const actions = [
+    { id: "create_draw", label: "Create New", style: 1, emoji: "➕" }
+  ]
+
+  // Add toggle buttons for each draw (limit to 4 total buttons)
+  draws.slice(0, 3).forEach(([drawId, draw]) => {
+    actions.push({
+      id: `toggle_${drawId}`,
+      label: `${draw.active ? "Deactivate" : "Activate"} ${draw.name.substring(0, 10)}`,
+      style: draw.active ? 4 : 3, // Red for deactivate, Green for activate
+      emoji: draw.active ? "🔴" : "🟢"
+    })
+  })
+
+  const actionButtons = createActionButtons(actions, "draws")
+  
+  return {
+    embeds: [embed],
+    components: [actionButtons]
+  }
 }
 
 async function generateUserManagement(db, guild) {
