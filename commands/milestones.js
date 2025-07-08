@@ -1,48 +1,58 @@
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from "discord.js"
 import { getDatabase } from "../utils/database.js"
 import { logger } from "../utils/logger.js"
+import { handleCategoryMenu, createPaginatedEmbeds } from "../utils/pagination.js"
 
 export const data = new SlashCommandBuilder()
   .setName("milestones")
   .setDescription("View donation milestones and progress")
-  .addSubcommand(subcommand =>
-    subcommand
-      .setName("list")
-      .setDescription("View all available milestones")
-  )
-  .addSubcommand(subcommand =>
-    subcommand
-      .setName("progress")
-      .setDescription("View your milestone progress")
-  )
-  .addSubcommand(subcommand =>
-    subcommand
-      .setName("rewards")
-      .setDescription("View milestone rewards")
-  )
 
 export async function execute(interaction) {
   try {
     const serverId = interaction.guildId
     const db = getDatabase(serverId)
-    const subcommand = interaction.options.getSubcommand()
+    const userId = interaction.user.id
 
-    switch (subcommand) {
-      case "list":
-        await handleListMilestones(interaction, db)
-        break
-      case "progress":
-        await handleProgress(interaction, db)
-        break
-      case "rewards":
-        await handleRewards(interaction, db)
-        break
-      default:
-        await interaction.reply({
-          content: "❌ Unknown subcommand.",
-          flags: MessageFlags.Ephemeral,
-        })
+    logger.info(`Milestones command executed by ${interaction.user.tag}`)
+
+    // Create milestones menu
+    const menuData = {
+      title: "🏆 Donation Milestones",
+      description: "Track your donation progress and unlock rewards!",
+      color: "#FFD700",
+      categories: [
+        {
+          id: "progress",
+          name: "My Progress",
+          emoji: "📈",
+          description: "View your current milestone progress",
+          generatePages: async () => await generateProgressPages(db, userId, interaction.guild)
+        },
+        {
+          id: "milestones",
+          name: "All Milestones",
+          emoji: "🎯",
+          description: "View all available milestones and rewards",
+          generatePages: async () => await generateMilestonesPages(db)
+        },
+        {
+          id: "rewards",
+          name: "Rewards",
+          emoji: "🎁",
+          description: "View milestone rewards and achievements",
+          generatePages: async () => await generateRewardsPages(db, userId)
+        },
+        {
+          id: "leaderboard",
+          name: "Leaderboard",
+          emoji: "🏆",
+          description: "See top milestone achievers",
+          generatePages: async () => await generateMilestoneLeaderboard(db, interaction.guild)
+        }
+      ]
     }
+
+    await handleCategoryMenu(interaction, menuData, "milestones")
   } catch (error) {
     logger.error("Error in milestones command:", error)
     
@@ -76,47 +86,30 @@ const MILESTONES = [
   { amount: 2500, reward: "Ultimate Patron", description: "Your legacy will be remembered!" }
 ]
 
-async function handleListMilestones(interaction, db) {
-  const embed = new EmbedBuilder()
-    .setTitle("🎯 Donation Milestones")
-    .setDescription("Reach these donation amounts to unlock special rewards!")
-    .setColor(db.config?.theme?.primary || "#4CAF50")
-
-  let milestonesText = ""
-  for (const milestone of MILESTONES) {
-    milestonesText += `💰 **$${milestone.amount}** - ${milestone.reward}\n${milestone.description}\n\n`
-  }
-
-  embed.addFields({
-    name: "Available Milestones",
-    value: milestonesText,
-    inline: false,
-  })
-
-  embed.addFields({
-    name: "💡 How It Works",
-    value: "Milestones are based on your total donation amount. Once you reach a milestone, you'll automatically receive the reward!",
-    inline: false,
-  })
-
-  embed.setFooter({ text: "Powered By Aegisum Eco System" })
-  await interaction.reply({ embeds: [embed] })
-}
-
-async function handleProgress(interaction, db) {
-  const userId = interaction.user.id
+async function generateProgressPages(db, userId, guild) {
   const userData = db.users?.[userId]
-
+  
   if (!userData) {
-    return interaction.reply({
-      content: "❌ You haven't made any donations yet. Make your first donation to start tracking milestones!",
-      flags: MessageFlags.Ephemeral,
-    })
+    const embed = new EmbedBuilder()
+      .setTitle("📈 Your Milestone Progress")
+      .setDescription("❌ You haven't made any donations yet.\n\nMake your first donation to start tracking milestones!")
+      .setColor("#F44336")
+      .addFields({
+        name: "🚀 Get Started",
+        value: [
+          "• Use `/donate` to make your first donation",
+          "• Donations are automatically tracked",
+          "• Unlock rewards as you reach milestones",
+          "• View your progress anytime with this command"
+        ].join("\n"),
+        inline: false
+      })
+      .setFooter({ text: "Powered By Aegisum Eco System" })
+    return [embed]
   }
 
   const totalDonated = userData.totalDonated || 0
-  const completedMilestones = userData.milestones || []
-
+  
   // Find current and next milestone
   let currentMilestone = null
   let nextMilestone = null
@@ -131,14 +124,14 @@ async function handleProgress(interaction, db) {
   }
 
   const embed = new EmbedBuilder()
-    .setTitle("📊 Your Milestone Progress")
-    .setDescription(`Total donated: **$${totalDonated.toFixed(2)}**`)
-    .setColor(db.config?.theme?.accent || "#FF9800")
+    .setTitle("📈 Your Milestone Progress")
+    .setDescription(`**Total Donated:** $${totalDonated.toFixed(2)}`)
+    .setColor("#FF9800")
 
   if (currentMilestone) {
     embed.addFields({
       name: "🏅 Current Milestone",
-      value: `**${currentMilestone.reward}** ($${currentMilestone.amount})\n${currentMilestone.description}`,
+      value: `**${currentMilestone.reward}**\n💰 $${currentMilestone.amount}\n${currentMilestone.description}`,
       inline: true,
     })
   }
@@ -150,49 +143,71 @@ async function handleProgress(interaction, db) {
     
     embed.addFields({
       name: "🎯 Next Milestone",
-      value: `**${nextMilestone.reward}** ($${nextMilestone.amount})\nNeed: $${needed.toFixed(2)} more\n${progressBar} ${progress.toFixed(1)}%`,
+      value: `**${nextMilestone.reward}**\n💰 $${nextMilestone.amount}\nNeed: $${needed.toFixed(2)} more\n\n${progressBar} ${progress.toFixed(1)}%`,
       inline: true,
     })
   } else {
     embed.addFields({
-      name: "🎉 Congratulations!",
-      value: "You've completed all available milestones!",
+      name: "🎉 All Complete!",
+      value: "You've completed all available milestones!\n\nYou're a true legend! 🏆",
       inline: true,
     })
   }
 
   // Show completed milestones
-  const completedText = MILESTONES
-    .filter(m => totalDonated >= m.amount)
-    .map(m => `✅ ${m.reward} ($${m.amount})`)
-    .join("\n") || "None yet"
+  const completedMilestones = MILESTONES.filter(m => totalDonated >= m.amount)
+  const completedText = completedMilestones.length > 0 
+    ? completedMilestones.map(m => `✅ ${m.reward} ($${m.amount})`).join("\n")
+    : "None yet - start donating to unlock rewards!"
 
   embed.addFields({
-    name: "🏆 Completed Milestones",
+    name: `🏆 Completed Milestones (${completedMilestones.length}/${MILESTONES.length})`,
     value: completedText,
     inline: false,
   })
 
   embed.setFooter({ text: "Powered By Aegisum Eco System" })
-  await interaction.reply({ embeds: [embed] })
+  return [embed]
 }
 
-async function handleRewards(interaction, db) {
-  const userId = interaction.user.id
+async function generateMilestonesPages(db) {
+  const pages = createPaginatedEmbeds(
+    MILESTONES,
+    5, // 5 milestones per page
+    (milestone) => {
+      return {
+        name: `💰 $${milestone.amount} - ${milestone.reward}`,
+        value: `${milestone.description}\n\n🎁 **Reward Benefits:**\n• Special Discord role\n• Exclusive recognition\n• Bonus draw entries`,
+        inline: false
+      }
+    },
+    {
+      title: "🎯 All Donation Milestones",
+      description: "Reach these donation amounts to unlock special rewards and recognition!",
+      color: "#4CAF50",
+      useFields: true,
+      footerText: "Powered By Aegisum Eco System"
+    }
+  )
+
+  return pages
+}
+
+async function generateRewardsPages(db, userId) {
   const userData = db.users?.[userId]
   const totalDonated = userData?.totalDonated || 0
 
   const embed = new EmbedBuilder()
     .setTitle("🎁 Milestone Rewards")
-    .setDescription("Special rewards for reaching donation milestones")
-    .setColor(db.config?.theme?.special || "#E91E63")
+    .setDescription("Special rewards and benefits for reaching donation milestones")
+    .setColor("#E91E63")
 
   let rewardsText = ""
   for (const milestone of MILESTONES) {
-    const status = totalDonated >= milestone.amount ? "✅" : "❌"
-    const unlocked = totalDonated >= milestone.amount ? " (UNLOCKED)" : ""
+    const status = totalDonated >= milestone.amount ? "✅ UNLOCKED" : "🔒 Locked"
+    const statusColor = totalDonated >= milestone.amount ? "**" : ""
     
-    rewardsText += `${status} **$${milestone.amount}** - ${milestone.reward}${unlocked}\n`
+    rewardsText += `${status} ${statusColor}$${milestone.amount} - ${milestone.reward}${statusColor}\n`
   }
 
   embed.addFields({
@@ -202,19 +217,82 @@ async function handleRewards(interaction, db) {
   })
 
   embed.addFields({
-    name: "💡 Reward Benefits",
+    name: "💎 Reward Benefits",
     value: [
-      "• **Special Discord Roles** - Show off your donor status",
-      "• **Exclusive Access** - VIP channels and features",
-      "• **Bonus Entries** - Extra chances in special draws",
-      "• **Recognition** - Featured in donor spotlights",
-      "• **Early Access** - First to know about new features"
+      "🎭 **Special Discord Roles** - Show off your donor status",
+      "🔑 **Exclusive Access** - VIP channels and features", 
+      "🎟️ **Bonus Entries** - Extra chances in special draws",
+      "⭐ **Recognition** - Featured in donor spotlights",
+      "🚀 **Early Access** - First to know about new features",
+      "🏆 **Leaderboard Status** - Top donor rankings",
+      "🎨 **Custom Perks** - Unique benefits per milestone"
     ].join("\n"),
     inline: false,
   })
 
+  const unlockedCount = MILESTONES.filter(m => totalDonated >= m.amount).length
+  embed.addFields({
+    name: "📊 Your Progress",
+    value: `**${unlockedCount}/${MILESTONES.length}** milestones unlocked\n**$${totalDonated.toFixed(2)}** total donated`,
+    inline: false,
+  })
+
   embed.setFooter({ text: "Powered By Aegisum Eco System" })
-  await interaction.reply({ embeds: [embed] })
+  return [embed]
+}
+
+async function generateMilestoneLeaderboard(db, guild) {
+  const users = Object.entries(db.users || {})
+    .filter(([userId, userData]) => !userData.privacyEnabled && userData.totalDonated > 0)
+    .sort(([, a], [, b]) => (b.totalDonated || 0) - (a.totalDonated || 0))
+    .slice(0, 15) // Top 15
+
+  if (users.length === 0) {
+    const embed = new EmbedBuilder()
+      .setTitle("🏆 Milestone Leaderboard")
+      .setDescription("❌ No public donation data available.")
+      .setColor("#F44336")
+      .setFooter({ text: "Powered By Aegisum Eco System" })
+    return [embed]
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle("🏆 Top Milestone Achievers")
+    .setDescription("Leaderboard of top donors and their milestone progress")
+    .setColor("#FFD700")
+
+  const leaderboardText = users
+    .map(([userId, userData], index) => {
+      const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}.`
+      const totalDonated = userData.totalDonated || 0
+      const completedMilestones = MILESTONES.filter(m => totalDonated >= m.amount).length
+      
+      // Find current milestone
+      let currentMilestone = "No milestones"
+      for (const milestone of MILESTONES) {
+        if (totalDonated >= milestone.amount) {
+          currentMilestone = milestone.reward
+        }
+      }
+      
+      return `${medal} <@${userId}>\n💰 $${totalDonated.toFixed(2)} • 🏆 ${completedMilestones}/${MILESTONES.length} milestones\n🎖️ ${currentMilestone}`
+    })
+    .join("\n\n")
+
+  embed.addFields({
+    name: "📊 Top Donors",
+    value: leaderboardText,
+    inline: false,
+  })
+
+  embed.addFields({
+    name: "💡 Privacy Note",
+    value: "Only users with public profiles are shown. Use `/user` to manage your privacy settings.",
+    inline: false,
+  })
+
+  embed.setFooter({ text: "Powered By Aegisum Eco System" })
+  return [embed]
 }
 
 function createProgressBar(percentage) {

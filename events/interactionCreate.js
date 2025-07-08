@@ -134,6 +134,120 @@ async function handleModalSubmit(interaction) {
       content: `✅ **Lucky Numbers Set!**\nYour lucky numbers: **${validNumbers.join(', ')}**\n\nThese numbers will be used for future draws and games.`,
       flags: MessageFlags.Ephemeral
     })
+  } else if (customId === 'admin_role_modal') {
+    const roleInput = interaction.fields.getTextInputValue('admin_role_input')
+    const guildId = interaction.guildId
+    
+    logger.info(`🛡️ Admin role modal submitted: input="${roleInput}" by user ${interaction.user.id}`)
+    
+    // Try to find the role
+    let role = null
+    
+    // Check if it's a role ID
+    if (/^\d+$/.test(roleInput)) {
+      role = interaction.guild.roles.cache.get(roleInput)
+    } else {
+      // Try to find by name (remove @ and # if present)
+      const roleName = roleInput.replace(/[@#]/g, '').trim()
+      role = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === roleName.toLowerCase())
+    }
+    
+    if (!role) {
+      await interaction.reply({
+        content: `❌ **Role Not Found**\nCould not find a role with ID or name: "${roleInput}"\n\nPlease check the role exists and try again.`,
+        flags: MessageFlags.Ephemeral
+      })
+      return
+    }
+    
+    // Save the admin role
+    const db = getDatabase(guildId)
+    if (!db.config) db.config = {}
+    db.config.adminRoleId = role.id
+    saveDatabase(guildId, db)
+    
+    logger.info(`🛡️ Admin role set to: ${role.name} (${role.id})`)
+    
+    await interaction.reply({
+      content: `✅ **Admin Role Set!**\nAdmin role is now: **${role.name}**\n\nUsers with this role can access admin commands.`,
+      flags: MessageFlags.Ephemeral
+    })
+  } else if (customId === 'log_channel_modal') {
+    const channelInput = interaction.fields.getTextInputValue('log_channel_input')
+    const guildId = interaction.guildId
+    
+    logger.info(`📝 Log channel modal submitted: input="${channelInput}" by user ${interaction.user.id}`)
+    
+    // Try to find the channel
+    let channel = null
+    
+    // Check if it's a channel ID
+    if (/^\d+$/.test(channelInput)) {
+      channel = interaction.guild.channels.cache.get(channelInput)
+    } else {
+      // Try to find by name (remove # if present)
+      const channelName = channelInput.replace(/#/g, '').trim()
+      channel = interaction.guild.channels.cache.find(c => c.name.toLowerCase() === channelName.toLowerCase())
+    }
+    
+    if (!channel || !channel.isTextBased()) {
+      await interaction.reply({
+        content: `❌ **Channel Not Found**\nCould not find a text channel with ID or name: "${channelInput}"\n\nPlease check the channel exists and is a text channel.`,
+        flags: MessageFlags.Ephemeral
+      })
+      return
+    }
+    
+    // Save the log channel
+    const db = getDatabase(guildId)
+    if (!db.config) db.config = {}
+    db.config.logChannelId = channel.id
+    saveDatabase(guildId, db)
+    
+    logger.info(`📝 Log channel set to: ${channel.name} (${channel.id})`)
+    
+    await interaction.reply({
+      content: `✅ **Log Channel Set!**\nLog channel is now: **${channel.name}**\n\nBot logs will be sent to this channel.`,
+      flags: MessageFlags.Ephemeral
+    })
+  } else if (customId === 'notification_channel_modal') {
+    const channelInput = interaction.fields.getTextInputValue('notification_channel_input')
+    const guildId = interaction.guildId
+    
+    logger.info(`📢 Notification channel modal submitted: input="${channelInput}" by user ${interaction.user.id}`)
+    
+    // Try to find the channel
+    let channel = null
+    
+    // Check if it's a channel ID
+    if (/^\d+$/.test(channelInput)) {
+      channel = interaction.guild.channels.cache.get(channelInput)
+    } else {
+      // Try to find by name (remove # if present)
+      const channelName = channelInput.replace(/#/g, '').trim()
+      channel = interaction.guild.channels.cache.find(c => c.name.toLowerCase() === channelName.toLowerCase())
+    }
+    
+    if (!channel || !channel.isTextBased()) {
+      await interaction.reply({
+        content: `❌ **Channel Not Found**\nCould not find a text channel with ID or name: "${channelInput}"\n\nPlease check the channel exists and is a text channel.`,
+        flags: MessageFlags.Ephemeral
+      })
+      return
+    }
+    
+    // Save the notification channel
+    const db = getDatabase(guildId)
+    if (!db.config) db.config = {}
+    db.config.notificationChannelId = channel.id
+    saveDatabase(guildId, db)
+    
+    logger.info(`📢 Notification channel set to: ${channel.name} (${channel.id})`)
+    
+    await interaction.reply({
+      content: `✅ **Notification Channel Set!**\nNotification channel is now: **${channel.name}**\n\nBot notifications will be sent to this channel.`,
+      flags: MessageFlags.Ephemeral
+    })
   }
 }
 

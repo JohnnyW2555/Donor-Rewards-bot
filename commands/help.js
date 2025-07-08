@@ -73,6 +73,13 @@ export async function execute(interaction) {
         emoji: "🎁",
         description: "Draw information and leaderboards",
         generatePages: async () => await generateDrawsHelp(db)
+      },
+      {
+        id: "about",
+        name: "About",
+        emoji: "ℹ️",
+        description: "About the bot and how it works",
+        generatePages: async () => await generateAboutHelp()
       }
     ]
 
@@ -362,4 +369,83 @@ async function showUserHelp(interaction, db) {
 async function showAdminHelp(interaction, db) {
   const pages = await generateAdminHelp(db)
   await handlePagination(interaction, pages, "help_admin")
+}
+
+async function generateAboutHelp() {
+  const embed = new EmbedBuilder()
+    .setTitle("ℹ️ About Donor Rewards Bot")
+    .setDescription("**Welcome to the Donor Rewards Bot!**\n\nThis bot is designed to reward community members for their donations and create an engaging ecosystem around charitable giving.")
+    .setColor("#00BCD4")
+    .addFields(
+      {
+        name: "🎯 How It Works",
+        value: [
+          "• **Donate** to enter draws and earn rewards",
+          "• **Automatic Detection** - Bot tracks tip.cc donations",
+          "• **Draw Entries** - Get entries based on donation amount",
+          "• **Lucky Numbers** - Set your lucky numbers for games",
+          "• **Achievements** - Unlock rewards for milestones",
+          "• **Leaderboards** - Compete with other donors"
+        ].join("\n"),
+        inline: false
+      },
+      {
+        name: "🎁 Draw System",
+        value: [
+          "• Multiple draws with different reward tiers",
+          "• Automatic entry based on donation amounts",
+          "• Fair and transparent winner selection",
+          "• Privacy controls for your entries",
+          "• Real-time tracking and statistics"
+        ].join("\n"),
+        inline: false
+      },
+      {
+        name: "🎮 Interactive Features",
+        value: [
+          "• **Interactive Menus** - Easy navigation with buttons",
+          "• **Real-time Updates** - Live statistics and progress",
+          "• **User Profiles** - Track your donation history",
+          "• **Privacy Controls** - Manage your visibility",
+          "• **Admin Tools** - Comprehensive management system"
+        ].join("\n"),
+        inline: false
+      },
+      {
+        name: "🏆 Key Features",
+        value: [
+          "• Multi-currency support (AEGS, USD, etc.)",
+          "• Automatic tip detection and processing",
+          "• Achievement system with unlockable rewards",
+          "• Referral system for community growth",
+          "• Milestone tracking and celebrations",
+          "• Comprehensive admin controls"
+        ].join("\n"),
+        inline: false
+      },
+      {
+        name: "🚀 Getting Started",
+        value: [
+          "1. Use `/help` to explore all features",
+          "2. Set up your profile with `/user`",
+          "3. View active draws with `/draws`",
+          "4. Start donating to enter draws!",
+          "5. Track your progress and achievements"
+        ].join("\n"),
+        inline: false
+      },
+      {
+        name: "👨‍💻 Credits",
+        value: [
+          "**Developer:** Daimondsteel259",
+          "**Special Thanks:** To the community for feedback and support",
+          "**Open Source:** Built with Discord.js and Node.js"
+        ].join("\n"),
+        inline: false
+      }
+    )
+    .setFooter({ text: "Powered By Aegisum Eco System" })
+    .setTimestamp()
+
+  return [embed]
 }

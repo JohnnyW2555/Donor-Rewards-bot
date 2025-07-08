@@ -484,6 +484,7 @@ async function handleActionButton(interaction, customId, category, action, guild
           content: `✅ Privacy settings ${db.users[userId].privacyEnabled ? 'enabled' : 'disabled'}!`,
           flags: MessageFlags.Ephemeral
         })
+        return
       }
     } else if (category.id === 'select_draw') {
       if (action === 'auto') {
@@ -494,6 +495,7 @@ async function handleActionButton(interaction, customId, category, action, guild
           content: "✅ Draw selection set to automatic!",
           flags: MessageFlags.Ephemeral
         })
+        return
       } else {
         // Check if it's a valid draw ID
         logger.info(`🔧 Checking draw: action=${action}, exists=${!!db.donationDraws?.[action]}, active=${db.donationDraws?.[action]?.active}`)
@@ -512,6 +514,7 @@ async function handleActionButton(interaction, customId, category, action, guild
           })
           
           logger.info(`🔧 Successfully replied with draw selection`)
+          return
         } else {
           logger.error(`🔧 Draw validation failed:`)
           logger.error(`  - action: ${action}`)
@@ -525,25 +528,68 @@ async function handleActionButton(interaction, customId, category, action, guild
             content: "❌ Invalid draw selection! Please try again.",
             flags: MessageFlags.Ephemeral
           })
+          return
         }
       }
     } else if (category.id === 'setup') {
       // Handle admin setup actions
       if (action === 'set_admin_role') {
-        await interaction.reply({
-          content: "🛡️ **Set Admin Role**\n\nTo set the admin role, please mention the role you want to use as admin role.\n\nExample: `@Admin` or `@Moderator`\n\n*This feature will be fully interactive in the next update.*",
-          flags: MessageFlags.Ephemeral
-        })
+        // Show role selection modal
+        const modal = new ModalBuilder()
+          .setCustomId('admin_role_modal')
+          .setTitle('Set Admin Role')
+        
+        const roleInput = new TextInputBuilder()
+          .setCustomId('admin_role_input')
+          .setLabel('Admin Role ID or Name')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Enter role ID (e.g., 123456789) or role name')
+          .setRequired(true)
+          .setMaxLength(100)
+        
+        const firstActionRow = new ActionRowBuilder().addComponents(roleInput)
+        modal.addComponents(firstActionRow)
+        
+        await interaction.showModal(modal)
+        return
       } else if (action === 'set_log_channel') {
-        await interaction.reply({
-          content: "📝 **Set Log Channel**\n\nTo set the log channel, please mention the channel you want to use for logs.\n\nExample: `#bot-logs` or `#admin-logs`\n\n*This feature will be fully interactive in the next update.*",
-          flags: MessageFlags.Ephemeral
-        })
+        // Show channel selection modal
+        const modal = new ModalBuilder()
+          .setCustomId('log_channel_modal')
+          .setTitle('Set Log Channel')
+        
+        const channelInput = new TextInputBuilder()
+          .setCustomId('log_channel_input')
+          .setLabel('Log Channel ID or Name')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Enter channel ID (e.g., 123456789) or #channel-name')
+          .setRequired(true)
+          .setMaxLength(100)
+        
+        const firstActionRow = new ActionRowBuilder().addComponents(channelInput)
+        modal.addComponents(firstActionRow)
+        
+        await interaction.showModal(modal)
+        return
       } else if (action === 'set_notification_channel') {
-        await interaction.reply({
-          content: "📢 **Set Notification Channel**\n\nTo set the notification channel, please mention the channel you want to use for notifications.\n\nExample: `#announcements` or `#notifications`\n\n*This feature will be fully interactive in the next update.*",
-          flags: MessageFlags.Ephemeral
-        })
+        // Show notification channel selection modal
+        const modal = new ModalBuilder()
+          .setCustomId('notification_channel_modal')
+          .setTitle('Set Notification Channel')
+        
+        const channelInput = new TextInputBuilder()
+          .setCustomId('notification_channel_input')
+          .setLabel('Notification Channel ID or Name')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Enter channel ID (e.g., 123456789) or #channel-name')
+          .setRequired(true)
+          .setMaxLength(100)
+        
+        const firstActionRow = new ActionRowBuilder().addComponents(channelInput)
+        modal.addComponents(firstActionRow)
+        
+        await interaction.showModal(modal)
+        return
       }
     } else if (category.id === 'set_lucky' || category.id === 'clear_lucky') {
       // Handle lucky number actions
@@ -565,6 +611,7 @@ async function handleActionButton(interaction, customId, category, action, guild
           content: `🎲 **Quick Pick Complete!**\nYour new lucky numbers: **${randomNumbers.join(", ")}**`,
           flags: MessageFlags.Ephemeral
         })
+        return
       } else if (action === 'clear_all' || action === 'confirm_clear') {
         if (!db.users[userId]) db.users[userId] = {}
         db.users[userId].luckyNumbers = []
@@ -574,11 +621,13 @@ async function handleActionButton(interaction, customId, category, action, guild
           content: "🗑️ **Lucky numbers cleared!**\nAll your lucky numbers have been removed.",
           flags: MessageFlags.Ephemeral
         })
+        return
       } else if (action === 'cancel_clear') {
         await interaction.reply({
           content: "❌ **Cancelled**\nYour lucky numbers were not cleared.",
           flags: MessageFlags.Ephemeral
         })
+        return
       } else if (action === 'manual_input') {
         // Show modal for manual input
         const modal = new ModalBuilder()
