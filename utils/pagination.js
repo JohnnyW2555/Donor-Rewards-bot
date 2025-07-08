@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ComponentType } from "discord.js"
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ComponentType, MessageFlags } from "discord.js"
 import { logger } from "./logger.js"
 import { getDatabase, saveDatabase } from "./database.js"
 
@@ -466,7 +466,7 @@ async function handleActionButton(interaction, customId, category, action, guild
         
         await interaction.reply({
           content: `✅ Privacy settings ${db.users[userId].privacyEnabled ? 'enabled' : 'disabled'}!`,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         })
       }
     } else if (category.id === 'select_draw') {
@@ -480,7 +480,7 @@ async function handleActionButton(interaction, customId, category, action, guild
         })
       } else {
         // Check if it's a valid draw ID
-        if (db.donationDraws[action] && db.donationDraws[action].active) {
+        if (db.donationDraws && db.donationDraws[action] && db.donationDraws[action].active) {
           db.users[userId].selectedDraw = action
           saveDatabase(guildId, db)
           
@@ -488,6 +488,13 @@ async function handleActionButton(interaction, customId, category, action, guild
           await interaction.reply({
             content: `✅ Selected draw: **${drawName}**!`,
             ephemeral: true
+          })
+        } else {
+          logger.error(`Draw selection failed: action=${action}, available draws:`, Object.keys(db.donationDraws || {}))
+          logger.error(`Draw details:`, db.donationDraws)
+          await interaction.reply({
+            content: "❌ Invalid draw selection! Please try again.",
+            flags: MessageFlags.Ephemeral
           })
         }
       }
