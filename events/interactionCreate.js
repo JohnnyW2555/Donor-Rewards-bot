@@ -248,6 +248,111 @@ async function handleModalSubmit(interaction) {
       content: `✅ **Notification Channel Set!**\nNotification channel is now: **${channel.name}**\n\nBot notifications will be sent to this channel.`,
       flags: MessageFlags.Ephemeral
     })
+  } else if (customId === 'referral_code_modal') {
+    const codeInput = interaction.fields.getTextInputValue('referral_code_input').toUpperCase().trim()
+    const guildId = interaction.guildId
+    const userId = interaction.user.id
+    
+    logger.info(`🤝 Referral code modal submitted: code="${codeInput}" by user ${interaction.user.id}`)
+    
+    const db = getDatabase(guildId)
+    
+    // Initialize user data if needed
+    if (!db.users) db.users = {}
+    if (!db.users[userId]) {
+      db.users[userId] = {
+        totalDonated: 0,
+        entries: {},
+        donations: [],
+        achievements: [],
+        privacyEnabled: false,
+        wins: 0,
+        referrals: { referred: [], referredBy: null },
+        luckyNumbers: [],
+        milestones: [],
+        streaks: { current: 0, longest: 0, lastDonation: null }
+      }
+    }
+
+    // Check if user already used a referral code
+    if (db.users[userId].referrals?.referredBy) {
+      await interaction.reply({
+        content: "❌ **Already Used a Referral Code**\nYou have already used a referral code and cannot use another one.",
+        flags: MessageFlags.Ephemeral
+      })
+      return
+    }
+
+    // Find the referrer
+    let referrerId = null
+    for (const [id, userData] of Object.entries(db.users || {})) {
+      if (userData.referralCode === codeInput) {
+        referrerId = id
+        break
+      }
+    }
+
+    if (!referrerId) {
+      await interaction.reply({
+        content: `❌ **Invalid Referral Code**\nThe code "${codeInput}" was not found. Please check the code and try again.`,
+        flags: MessageFlags.Ephemeral
+      })
+      return
+    }
+
+    if (referrerId === userId) {
+      await interaction.reply({
+        content: "❌ **Cannot Use Own Code**\nYou cannot use your own referral code.",
+        flags: MessageFlags.Ephemeral
+      })
+      return
+    }
+
+    // Apply referral
+    db.users[userId].referrals.referredBy = referrerId
+    
+    if (!db.users[referrerId].referrals) {
+      db.users[referrerId].referrals = { referred: [], referredBy: null }
+    }
+    if (!db.users[referrerId].referrals.referred) {
+      db.users[referrerId].referrals.referred = []
+    }
+    
+    db.users[referrerId].referrals.referred.push(userId)
+    saveDatabase(guildId, db)
+
+    // Get referrer info
+    const referrer = await interaction.guild.members.fetch(referrerId).catch(() => null)
+    const referrerName = referrer?.user.username || "Unknown User"
+
+    logger.info(`🤝 Referral applied: ${interaction.user.tag} referred by ${referrerName}`)
+
+    await interaction.reply({
+      content: `✅ **Referral Code Applied!**\nYou've been successfully referred by **${referrerName}**!\n\n🎁 **Your Benefits:**\n• Bonus entries on your first donation\n• Welcome to the community!\n• Your referrer also earned rewards\n\nStart donating to activate your bonuses!`,
+      flags: MessageFlags.Ephemeral
+    })
+
+    // Notify referrer if possible
+    try {
+      const referrerUser = referrer?.user
+      if (referrerUser) {
+        const dmEmbed = new EmbedBuilder()
+          .setTitle("🎉 New Referral!")
+          .setDescription(`**${interaction.user.username}** used your referral code!`)
+          .setColor("#4CAF50")
+          .addFields({
+            name: "🎁 Your Reward",
+            value: "You've earned 5 bonus entries in active draws!",
+            inline: false,
+          })
+
+        await referrerUser.send({ embeds: [dmEmbed] }).catch(() => {
+          // Ignore DM errors
+        })
+      }
+    } catch (error) {
+      // Ignore notification errors
+    }
   }
 }
 

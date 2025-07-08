@@ -471,8 +471,8 @@ async function handleActionButton(interaction, customId, category, action, guild
       }
     }
     
-    if (category.id === 'privacy' || customId.includes('user_privacy') || customId.includes('privacy')) {
-      logger.info(`🔒 Privacy action detected: action=${action}`)
+    if (category.id === 'privacy' || category.id === 'user_privacy' || customId.includes('user_privacy') || customId.includes('privacy') || action === 'toggle_privacy') {
+      logger.info(`🔒 Privacy action detected: action=${action}, category=${category.id}`)
       if (action === 'toggle_privacy') {
         const oldValue = db.users[userId].privacyEnabled
         db.users[userId].privacyEnabled = !db.users[userId].privacyEnabled
@@ -674,6 +674,51 @@ async function handleActionButton(interaction, customId, category, action, guild
           content: "🎯 **Create New Draw**\n\nTo create a new draw, you'll need to provide:\n• Draw name\n• Minimum donation amount\n• Maximum donation amount\n• Reward description\n• Maximum entries\n\n*Full draw creation interface coming soon!*",
           flags: MessageFlags.Ephemeral
         })
+        return
+      }
+    } else if (category.id === 'my_code') {
+      // Handle referral code actions
+      if (action === 'copy_code') {
+        await interaction.reply({
+          content: "📋 **Copy Your Referral Code**\n\nYour referral code is displayed above. Simply select and copy it to share with friends!\n\n💡 **Tip:** You can also right-click the code and select 'Copy' on most devices.",
+          flags: MessageFlags.Ephemeral
+        })
+        return
+      } else if (action === 'share_tips') {
+        await interaction.reply({
+          content: "💡 **Referral Sharing Tips**\n\n🎯 **Best Places to Share:**\n• Social media (Twitter, Discord, etc.)\n• Gaming communities\n• Friend groups and family\n• Crypto/donation communities\n\n📝 **What to Say:**\n• Explain the benefits they'll get\n• Mention it's free to join\n• Share your positive experience\n• Be genuine and helpful\n\n🚀 **Pro Tips:**\n• Help new users get started\n• Answer their questions\n• Stay active in the community\n• Lead by example with donations",
+          flags: MessageFlags.Ephemeral
+        })
+        return
+      }
+    } else if (category.id === 'use_code') {
+      // Handle use referral code actions
+      if (action === 'enter_code') {
+        // Show modal for entering referral code
+        const modal = new ModalBuilder()
+          .setCustomId('referral_code_modal')
+          .setTitle('Enter Referral Code')
+        
+        const codeInput = new TextInputBuilder()
+          .setCustomId('referral_code_input')
+          .setLabel('Referral Code')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Enter the 6-character referral code (e.g., ABC123)')
+          .setRequired(true)
+          .setMaxLength(10)
+          .setMinLength(3)
+        
+        const firstActionRow = new ActionRowBuilder().addComponents(codeInput)
+        modal.addComponents(firstActionRow)
+        
+        await interaction.showModal(modal)
+        return
+      } else if (action === 'code_help') {
+        await interaction.reply({
+          content: "❓ **Need Help with Referral Codes?**\n\n🔍 **What is a Referral Code?**\nA 6-character code (like ABC123) that friends share with you to earn rewards.\n\n🎁 **Benefits of Using a Code:**\n• Get bonus entries on your first donation\n• Connect with the person who referred you\n• Support community growth\n\n📝 **How to Get a Code:**\n• Ask friends who use this bot\n• Look for codes shared in community channels\n• Join social media groups for this community\n\n⚠️ **Important:**\n• You can only use ONE referral code per account\n• You cannot use your own referral code\n• Codes are case-insensitive",
+          flags: MessageFlags.Ephemeral
+        })
+        return
       }
     }
   } catch (error) {
