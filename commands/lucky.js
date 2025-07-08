@@ -115,6 +115,7 @@ async function generateSetLuckyNumbers(db, user) {
 
   const actionButtons = createActionButtons([
     { id: "quick_pick", label: "Quick Pick (Random)", style: 1, emoji: "🎲" },
+    { id: "manual_input", label: "Manual Input", style: 2, emoji: "✏️" },
     { id: "clear_all", label: "Clear All", style: 4, emoji: "🗑️" }
   ], "set_lucky")
 

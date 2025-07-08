@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ComponentType, MessageFlags } from "discord.js"
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ComponentType, MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js"
 import { logger } from "./logger.js"
 import { getDatabase, saveDatabase } from "./database.js"
 
@@ -323,7 +323,21 @@ export async function handleCategoryMenu(interaction, menuData, customId, timeou
       return { embeds: [embed], components }
     }
 
-    await buttonInteraction.update(await updateCategoryView(currentPage))
+    try {
+      logger.info("🔧 About to update category view...")
+      await buttonInteraction.update(await updateCategoryView(currentPage))
+      logger.info("🔧 Successfully updated category view")
+    } catch (updateError) {
+      logger.error("❌ Failed to update category view:", updateError.message)
+      // If update fails, try to reply instead
+      try {
+        if (!buttonInteraction.replied) {
+          await buttonInteraction.reply(await updateCategoryView(currentPage))
+        }
+      } catch (replyError) {
+        logger.error("❌ Failed to reply with category view:", replyError.message)
+      }
+    }
 
     // Handle category pagination
     const categoryCollector = response.createMessageComponentCollector({
@@ -457,7 +471,7 @@ async function handleActionButton(interaction, customId, category, action, guild
       }
     }
     
-    if (category.id === 'privacy' || customId.includes('user_privacy')) {
+    if (category.id === 'privacy' || customId.includes('user_privacy') || customId.includes('privacy')) {
       logger.info(`🔒 Privacy action detected: action=${action}`)
       if (action === 'toggle_privacy') {
         const oldValue = db.users[userId].privacyEnabled
@@ -565,6 +579,25 @@ async function handleActionButton(interaction, customId, category, action, guild
           content: "❌ **Cancelled**\nYour lucky numbers were not cleared.",
           flags: MessageFlags.Ephemeral
         })
+      } else if (action === 'manual_input') {
+        // Show modal for manual input
+        const modal = new ModalBuilder()
+          .setCustomId('lucky_numbers_modal')
+          .setTitle('Set Lucky Numbers')
+        
+        const numbersInput = new TextInputBuilder()
+          .setCustomId('lucky_numbers_input')
+          .setLabel('Enter your lucky numbers (1-50)')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Example: 7, 13, 21, 35, 42')
+          .setRequired(true)
+          .setMaxLength(50)
+        
+        const firstActionRow = new ActionRowBuilder().addComponents(numbersInput)
+        modal.addComponents(firstActionRow)
+        
+        await interaction.showModal(modal)
+        return // Don't continue with normal processing
       }
     } else if (category.id === 'draws') {
       // Handle draw management actions

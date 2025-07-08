@@ -1,7 +1,7 @@
-import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js"
+import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from "discord.js"
 import { getDatabase } from "../utils/database.js"
 import { logger } from "../utils/logger.js"
-import { handleCategoryMenu, createPaginatedEmbeds } from "../utils/pagination.js"
+import { handleCategoryMenu, createPaginatedEmbeds, handlePagination } from "../utils/pagination.js"
 
 export const data = new SlashCommandBuilder()
   .setName("help")
@@ -30,7 +30,7 @@ export async function execute(interaction) {
     if (type === "admin" && !isAdmin) {
       return interaction.reply({
         content: "❌ You don't have permission to view admin commands.",
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       })
     }
     
@@ -99,7 +99,7 @@ export async function execute(interaction) {
     logger.error("Error in help command:", error)
     await interaction.reply({
       content: "❌ An error occurred while fetching help information.",
-      ephemeral: true
+      flags: MessageFlags.Ephemeral
     })
   }
 }
@@ -129,12 +129,8 @@ async function generateEssentialHelp(db) {
       description: "View active draws, leaderboards, and draw information. Interactive menu to explore all draw-related features."
     },
     {
-      name: "/user entries",
-      description: "Check your current draw entries across all active draws. Shows how many entries you have and potential rewards."
-    },
-    {
-      name: "/user profile [target]",
-      description: "View detailed donation profile including total donated, achievements, and donation history."
+      name: "/user",
+      description: "Interactive user profile system. Access all user features through an interactive menu including entries, profile, privacy settings, and draw selection."
     },
     {
       name: "/price [symbol]",
@@ -169,28 +165,28 @@ async function generateEssentialHelp(db) {
 async function generateUserHelp(db) {
   const commands = [
     {
-      name: "/user profile [target]",
-      description: "View detailed donation profile including total donated, achievements earned, and donation history."
+      name: "/user",
+      description: "🎯 **Interactive User Menu** - Access all user features through an interactive menu system with buttons and categories."
     },
     {
-      name: "/user entries",
-      description: "Check your current draw entries across all active draws. Shows entries and potential rewards."
+      name: "📊 Profile Category",
+      description: "View your donation profile, statistics, achievements, and donation history. See total donated and progress."
     },
     {
-      name: "/user donor_roles",
-      description: "View donor role requirements and your progress towards the next role tier."
+      name: "🎟️ Draw Entries Category", 
+      description: "Check your current entries across all active draws. See potential rewards and entry counts."
     },
     {
-      name: "/user select_draw [draw_id]",
-      description: "Choose which draw your future donations will count towards. Use 'auto' for automatic selection."
+      name: "🎯 Select Draw Category",
+      description: "Choose which draw your future donations count towards. Interactive buttons for each active draw."
     },
     {
-      name: "/user privacy [setting]",
-      description: "Manage your privacy settings. Control who can see your donation history and profile."
+      name: "🔒 Privacy Settings Category",
+      description: "Toggle privacy settings with interactive buttons. Control who can see your profile and donations."
     },
     {
-      name: "/user achievements [target]",
-      description: "View your achievements or another user's achievements with progress tracking."
+      name: "🏆 Achievements Category",
+      description: "View your earned achievements and progress towards new ones. Interactive achievement browser."
     }
   ]
 
@@ -217,24 +213,36 @@ async function generateUserHelp(db) {
 async function generateGamesHelp(db) {
   const commands = [
     {
+      name: "/lucky",
+      description: "🍀 **Interactive Lucky Numbers** - Set lucky numbers with buttons, quick pick random numbers, or clear all numbers."
+    },
+    {
+      name: "👀 View Lucky Numbers",
+      description: "See your current lucky numbers and statistics. Shows total numbers set and range information."
+    },
+    {
+      name: "🎯 Set Lucky Numbers",
+      description: "Set your lucky numbers with interactive buttons. Quick pick for random selection or manual entry."
+    },
+    {
+      name: "🗑️ Clear Lucky Numbers",
+      description: "Clear all your lucky numbers with confirmation buttons. Includes cancel option for safety."
+    },
+    {
       name: "/achievements",
-      description: "Interactive achievement system. View available achievements, your progress, and earned achievements."
+      description: "Interactive achievement browser. View available achievements, progress, and earned achievements."
     },
     {
       name: "/leaderboard",
-      description: "View various leaderboards including total donations, monthly, weekly, entries, achievements, and streaks."
-    },
-    {
-      name: "/lucky",
-      description: "Play the lucky number game. Choose your lucky numbers and win bonus entries if they match."
+      description: "Multiple leaderboards: donations, monthly, weekly, entries, achievements, and streaks."
     },
     {
       name: "/milestones",
-      description: "View donation milestones and rewards for reaching certain donation amounts."
+      description: "View donation milestones and rewards for reaching certain amounts. Track your progress."
     },
     {
       name: "/referral",
-      description: "Manage your referrals. Earn bonus entries when people you refer make donations."
+      description: "Referral system to earn bonus entries when people you refer make donations."
     }
   ]
 
@@ -293,44 +301,36 @@ async function generateDrawsHelp(db) {
 async function generateAdminHelp(db) {
   const commands = [
     {
-      name: "/admin setup",
-      description: "Initial bot configuration wizard. Set up admin roles, channels, and basic settings."
+      name: "/admin",
+      description: "🛠️ **Interactive Admin Panel** - Complete administrative control through interactive menus and buttons."
     },
     {
-      name: "/admin create_draw",
-      description: "Create new donation draws with custom requirements, rewards, and entry limits."
+      name: "⚙️ Bot Setup Category",
+      description: "Configure admin roles, log channels, and notification channels with interactive buttons."
     },
     {
-      name: "/admin select_winner [draw_id]",
-      description: "Select winners for completed draws using weighted random selection."
+      name: "🎯 Manage Draws Category",
+      description: "Create, edit, activate/deactivate draws with interactive buttons. Toggle draw status instantly."
     },
     {
-      name: "/admin assign_entries",
-      description: "Manually assign entries to users or roles. Respects blacklist settings."
+      name: "📊 Dashboard Category",
+      description: "View server statistics, user counts, donation totals, and system status."
     },
     {
-      name: "/admin analytics [type]",
-      description: "View detailed server analytics including donations, users, and draw statistics."
+      name: "📈 Analytics Category",
+      description: "Detailed analytics with charts and reports. Track donations, users, and draw performance."
     },
     {
-      name: "/admin blacklist",
-      description: "Manage blacklisted users. Add, remove, or list blacklisted users."
+      name: "🚫 Blacklist Category",
+      description: "Manage blacklisted users with interactive add/remove buttons. View current blacklist."
     },
     {
-      name: "/admin add_recipient",
-      description: "Add allowed donation recipients. Users can only donate to these recipients."
+      name: "👥 User Management Category",
+      description: "Manage user entries, assign manual entries, and view user statistics."
     },
     {
-      name: "/admin features",
-      description: "Toggle bot features on/off. Control which features are available to users."
-    },
-    {
-      name: "/admin dashboard",
-      description: "View comprehensive admin dashboard with server overview and statistics."
-    },
-    {
-      name: "/admin fix_achievements",
-      description: "Fix achievement assignments for all users. Useful after achievement updates."
+      name: "🔧 Features Category",
+      description: "Toggle bot features on/off with interactive switches. Control available functionality."
     }
   ]
 
