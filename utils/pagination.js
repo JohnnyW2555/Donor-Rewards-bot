@@ -437,6 +437,8 @@ async function handleActionButton(interaction, customId, category, action, guild
     const db = getDatabase(guildId)
     const userId = interaction.user.id
     
+    logger.info(`🔧 Database loaded, userId=${userId}, db keys:`, Object.keys(db))
+    
     // Initialize users object if needed
     if (!db.users) {
       db.users = {}
@@ -480,18 +482,31 @@ async function handleActionButton(interaction, customId, category, action, guild
         })
       } else {
         // Check if it's a valid draw ID
+        logger.info(`🔧 Checking draw: action=${action}, exists=${!!db.donationDraws?.[action]}, active=${db.donationDraws?.[action]?.active}`)
+        
         if (db.donationDraws && db.donationDraws[action] && db.donationDraws[action].active) {
+          logger.info(`🔧 Valid draw found, setting selectedDraw to ${action}`)
           db.users[userId].selectedDraw = action
           saveDatabase(guildId, db)
           
           const drawName = db.donationDraws[action].name
+          logger.info(`🔧 About to reply with success message for draw: ${drawName}`)
+          
           await interaction.reply({
             content: `✅ Selected draw: **${drawName}**!`,
             flags: MessageFlags.Ephemeral
           })
+          
+          logger.info(`🔧 Successfully replied with draw selection`)
         } else {
-          logger.error(`Draw selection failed: action=${action}, available draws:`, Object.keys(db.donationDraws || {}))
-          logger.error(`Draw details:`, db.donationDraws)
+          logger.error(`🔧 Draw validation failed:`)
+          logger.error(`  - action: ${action}`)
+          logger.error(`  - db.donationDraws exists: ${!!db.donationDraws}`)
+          logger.error(`  - draw exists: ${!!db.donationDraws?.[action]}`)
+          logger.error(`  - draw active: ${db.donationDraws?.[action]?.active}`)
+          logger.error(`  - available draws:`, Object.keys(db.donationDraws || {}))
+          logger.error(`  - draw details:`, db.donationDraws?.[action])
+          
           await interaction.reply({
             content: "❌ Invalid draw selection! Please try again.",
             flags: MessageFlags.Ephemeral
@@ -580,24 +595,38 @@ async function handleActionButton(interaction, customId, category, action, guild
       }
     }
   } catch (error) {
-    logger.error("Error handling action button:", error)
+    logger.error("❌ CRITICAL ERROR in handleActionButton:")
+    logger.error("Error message:", error.message)
     logger.error("Error stack:", error.stack)
-    logger.error("Action details:", { customId, categoryId: category.id, action, guildId })
+    logger.error("Action details:", { 
+      customId, 
+      categoryId: category?.id, 
+      action, 
+      guildId,
+      userId: interaction?.user?.id,
+      interactionReplied: interaction?.replied,
+      interactionDeferred: interaction?.deferred
+    })
     
     try {
       if (!interaction.replied && !interaction.deferred) {
+        logger.info("🔧 Attempting to reply with error message...")
         await interaction.reply({
           content: "❌ An error occurred while processing your request.",
           flags: MessageFlags.Ephemeral
         })
+        logger.info("🔧 Successfully sent error reply")
       } else {
+        logger.info("🔧 Attempting to followUp with error message...")
         await interaction.followUp({
           content: "❌ An error occurred while processing your request.",
           flags: MessageFlags.Ephemeral
         })
+        logger.info("🔧 Successfully sent error followUp")
       }
     } catch (followUpError) {
-      logger.error("Error sending error response:", followUpError)
+      logger.error("❌ FAILED to send error response:", followUpError.message)
+      logger.error("FollowUp error stack:", followUpError.stack)
     }
   }
 }

@@ -9,8 +9,10 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction) {
   try {
+    logger.info(`🎲 Lucky command executed by ${interaction.user.tag}`)
     const serverId = interaction.guildId
     const db = getDatabase(serverId)
+    logger.info(`🎲 Database loaded for guild ${serverId}`)
     
     // Create interactive menu for lucky numbers
     const categories = [
@@ -37,11 +39,16 @@ export async function execute(interaction) {
       }
     ]
 
-    await handleCategoryMenu(interaction, categories, {
+    logger.info(`🎲 About to call handleCategoryMenu with ${categories.length} categories`)
+    
+    await handleCategoryMenu(interaction, {
+      categories,
       title: "🍀 Lucky Numbers",
       description: "Manage your lucky numbers for draws and games",
       color: "#00FF00"
-    })
+    }, "lucky")
+    
+    logger.info(`🎲 handleCategoryMenu completed successfully`)
   } catch (error) {
     logger.error("Error in lucky command:", error)
     
