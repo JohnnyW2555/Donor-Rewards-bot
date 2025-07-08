@@ -261,8 +261,8 @@ async function generateMilestoneLeaderboard(db, guild) {
     .setDescription("Leaderboard of top donors and their milestone progress")
     .setColor("#FFD700")
 
-  const leaderboardText = users
-    .map(([userId, userData], index) => {
+  const leaderboardText = await Promise.all(
+    users.map(async ([userId, userData], index) => {
       const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}.`
       const totalDonated = userData.totalDonated || 0
       const completedMilestones = MILESTONES.filter(m => totalDonated >= m.amount).length
@@ -275,13 +275,25 @@ async function generateMilestoneLeaderboard(db, guild) {
         }
       }
       
-      return `${medal} <@${userId}>\n💰 $${totalDonated.toFixed(2)} • 🏆 ${completedMilestones}/${MILESTONES.length} milestones\n🎖️ ${currentMilestone}`
+      // Get username safely
+      let username = "Unknown User"
+      try {
+        const user = await guild.members.fetch(userId)
+        username = user.user.username
+      } catch {
+        // Use user ID if can't fetch
+        username = `User ${userId.slice(-4)}`
+      }
+      
+      return `${medal} **${username}**\n💰 $${totalDonated.toFixed(2)} • 🏆 ${completedMilestones}/${MILESTONES.length} milestones\n🎖️ ${currentMilestone}`
     })
-    .join("\n\n")
+  )
+  
+  const finalLeaderboardText = leaderboardText.join("\n\n")
 
   embed.addFields({
     name: "📊 Top Donors",
-    value: leaderboardText,
+    value: finalLeaderboardText,
     inline: false,
   })
 
